@@ -23,13 +23,13 @@ from collections import Counter
 # ftp://ftp.ncbi.nih.gov/blast/matrices/
 import nwalign3 as nw
 
-__author__ = "Your Name"
-__copyright__ = "Universite Paris Diderot"
-__credits__ = ["Your Name"]
+__author__ = "Kermarrec Maxime"
+__copyright__ = "Universite de Paris"
+__credits__ = ["Kermarrec Maxime"]
 __license__ = "GPL"
 __version__ = "1.0.0"
-__maintainer__ = "Your Name"
-__email__ = "your@email.fr"
+__maintainer__ = "Kermarrec Maxime"
+__email__ = "maximekermarrec14@gmail.com"
 __status__ = "Developpement"
 
 
@@ -69,6 +69,81 @@ def get_arguments():
                         default="OTU.fasta", help="Output file")
     return parser.parse_args()
 
+
+def read_fasta(amplicon_file, minseqlen):
+    if str(amplicon_file)[len(amplicon_file)-3:len(amplicon_file)] == ".gz":
+        with gzip.open(amplicon_file, "rb") as filin:
+            for ligne in filin:
+                if ligne.startswith(b">"):
+                    pass
+                else : 
+                    seq = b"" + ligne.strip()
+                    yield str(seq.decode('ascii'))
+                #if len(str(filin.decode('UTF-8').strip())) >= minseqlen:
+                    #yield filin.decode('UTF-8').strip()
+    else :
+        with open(amplicon_file, "r") as filin:
+            for ligne in filin:
+                if ligne.startswith(">"):
+                    pass
+                else :
+                    if len(ligne.strip()) >= minseqlen:
+                        yield str(ligne.strip())
+
+def dereplication_fulllength(amplicon_file, minseqlen, mincount):
+    OTU = {}
+    true_OTU = {}
+    for seq in read_fasta(amplicon_file,minseqlen):
+        seq = str(seq)
+        if seq in OTU:
+            OTU[seq] = OTU[seq] + 1
+        else:
+            OTU[seq] = 1
+
+    for seq in OTU:
+        if OTU[seq] >= mincount:
+            true_OTU[seq] = OTU[seq]
+    true_OTU = sorted(true_OTU.items(), key = lambda t: t[1], reverse = True)
+    return true_OTU
+
+def read_16S(fichier):
+    with open(fichier, "r") as filin:
+        i = -1
+        seq = []
+        for ligne in filin:
+            if ligne.startswith(">"):
+                i  += 1
+                seq.append('')
+                pass
+            else:
+                seq[i] = str(seq[i]) + str(ligne).strip()
+        return seq
+
+def get_chunks(sequence, chunk_size):
+    chunk = []
+    chunk.append(sequence[0, chunk_size])
+    chunk.append(sequence[chunk_size, (2*chunk_size)])
+    chunk.append(sequence[(2*chunk_size), (3*chunk_size)])
+    chunk.append(sequence[(3*chunk_size), (4*chunk_size)])
+    return chunk
+
+def cut_kmer(sequence, kmer_size):
+    j=0
+    for i in range(kmer_size,len(sequence), kmer_size):
+        yield sequence[j:i]
+        j = i
+
+
+def get_unique_kmer(kmer_dict, sequence, id_seq, kmer_size):
+    return
+
+#def search_mates(kmer_dict, sequence, kmer_size):
+#def get_identity(alignment_list):
+#def detect_chimera(perc_identity_matrix):
+#def chimera_removal(amplicon_file, minseqlen, mincount, chunk_size, kmer_size):
+#def abundance_greedy_clustering(amplicon_file, minseqlen, mincount, chunk_size, kmer_size):
+#def write_OTU(OTU_list, output_file):
+
 #==============================================================
 # Main program
 #==============================================================
@@ -78,6 +153,12 @@ def main():
     """
     # Get arguments
     args = get_arguments()
+
+    OTU = dereplication_fulllength(args.amplicon_file, args.minseqlen, args.mincount)
+    print(OTU)
+    ADN_16_S = read_16S("../data/mock_16S.fasta")
+    for seq in OTU:
+        k_mer = get_chunks(seq, args.chunk_size)
 
 
 if __name__ == '__main__':
